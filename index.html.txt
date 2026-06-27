@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mon Conseiller Auto</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet"/>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #07070f; font-family: Inter, sans-serif; color: #F8F8F8; }
+    @keyframes bounce { 0%,80%,100%{transform:translateY(0);opacity:0.4} 40%{transform:translateY(-5px);opacity:1} }
+    ::-webkit-scrollbar{width:4px}
+    ::-webkit-scrollbar-track{background:#07070f}
+    ::-webkit-scrollbar-thumb{background:#1565C0;border-radius:2px}
+    textarea::placeholder{color:#444}
+    input[type=range]{cursor:pointer;accent-color:#1565C0}
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel" data-presets="react">
+const { useState, useRef, useEffect } = React;
+
+
+
+// ═══════════════════════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════════════════════
+const STEPS = [
+  { id:"profil", title:"Vous êtes…", subtitle:"Cela nous aide à adapter nos conseils", type:"single", options:[
+    {value:"particulier",label:"Un particulier",icon:"👤",desc:"Usage personnel ou familial"},
+    {value:"pro_liberal",label:"Un professionnel libéral",icon:"💼",desc:"Médecin, avocat, consultant…"},
+    {value:"entreprise",label:"Une entreprise",icon:"🏢",desc:"TPE, PME, gestion de flotte"},
+  ]},
+  { id:"usage", title:"Quel sera l'usage principal ?", subtitle:"Sélectionnez tout ce qui s'applique", type:"multi", options:[
+    {value:"ville",label:"Trajets quotidiens en ville",icon:"🏙️"},
+    {value:"routes",label:"Routes & autoroutes",icon:"🛣️"},
+    {value:"famille",label:"Transport familial",icon:"👨‍👩‍👧"},
+    {value:"commercial",label:"Déplacements commerciaux",icon:"🗺️"},
+    {value:"loisirs",label:"Loisirs / week-ends",icon:"🏕️"},
+    {value:"livraison",label:"Livraison / utilitaire",icon:"📦"},
+  ]},
+  { id:"km", title:"Combien de kilomètres par an ?", subtitle:"Une estimation suffit", type:"single", options:[
+    {value:"moins_10k",label:"Moins de 10 000 km",icon:"🐢",desc:"Véhicule secondaire"},
+    {value:"10_20k",label:"10 000 – 20 000 km",icon:"🚗",desc:"Usage standard"},
+    {value:"20_40k",label:"20 000 – 40 000 km",icon:"⚡",desc:"Gros rouleur"},
+    {value:"plus_40k",label:"Plus de 40 000 km",icon:"🚀",desc:"Professionnel itinérant"},
+  ]},
+  { id:"budget", title:"Quel est votre budget ?", subtitle:"Budget total ou mensualité", type:"single", options:[
+    {value:"moins_15k",label:"Moins de 15 000 €",icon:"💶",desc:"ou < 200 €/mois"},
+    {value:"15_30k",label:"15 000 – 30 000 €",icon:"💶💶",desc:"ou 200 – 400 €/mois"},
+    {value:"30_50k",label:"30 000 – 50 000 €",icon:"💶💶💶",desc:"ou 400 – 700 €/mois"},
+    {value:"plus_50k",label:"Plus de 50 000 €",icon:"💎",desc:"ou > 700 €/mois"},
+  ]},
+  { id:"financement", title:"Comment souhaitez-vous financer ?", subtitle:"Vous pouvez ne pas encore avoir décidé", type:"single", options:[
+    {value:"comptant",label:"Achat comptant",icon:"💰",desc:"Propriétaire direct"},
+    {value:"credit",label:"Crédit classique",icon:"🏦",desc:"Propriétaire dès l'achat"},
+    {value:"loa",label:"LOA (leasing)",icon:"🔄",desc:"Option d'achat en fin"},
+    {value:"lld",label:"LLD",icon:"📋",desc:"Sans option d'achat"},
+    {value:"indecis",label:"Je ne sais pas encore",icon:"🤔",desc:"Conseillez-moi !"},
+  ]},
+  { id:"priorites", title:"Vos priorités ?", subtitle:"Jusqu'à 3 choix", type:"multi", max:3, options:[
+    {value:"eco",label:"Économies de carburant",icon:"⛽"},
+    {value:"electrique",label:"Passer à l'électrique",icon:"🔋"},
+    {value:"fiabilite",label:"Fiabilité & entretien bas",icon:"🔧"},
+    {value:"confort",label:"Confort & équipements",icon:"🛋️"},
+    {value:"sport",label:"Plaisir de conduite",icon:"🏎️"},
+    {value:"capacite",label:"Espace & capacité",icon:"📦"},
+    {value:"fiscalite",label:"Optimisation fiscale",icon:"📊"},
+    {value:"revente",label:"Bonne valeur à la revente",icon:"📈"},
+  ]},
+  { id:"situation", title:"Votre situation actuelle ?", subtitle:"Pour affiner nos recommandations", type:"single", options:[
+    {value:"renouvellement",label:"Renouveler mon véhicule actuel",icon:"🔁",desc:"Remplacement d'un existant"},
+    {value:"premier_achat",label:"Premier achat / nouveau besoin",icon:"🆕",desc:"Véhicule supplémentaire"},
+    {value:"urgence",label:"Besoin urgent (< 1 mois)",icon:"⏱️",desc:"Occasion ou stock dispo"},
+    {value:"projet_6mois",label:"Projet dans 3–6 mois",icon:"📅",desc:"Temps de comparer"},
+  ]},
+];
+
+const SAV_TOPICS = [
+  {icon:"🔔",label:"Voyant moteur allumé",q:"Mon voyant moteur est allumé, qu'est-ce que ça signifie et est-ce grave ?"},
+  {icon:"🛢️",label:"Voyant huile",q:"Mon voyant huile est allumé, que dois-je faire immédiatement ?"},
+  {icon:"🌡️",label:"Voyant température",q:"Mon voyant température moteur est au rouge, que faire ?"},
+  {icon:"🔋",label:"Voyant batterie",q:"Mon voyant batterie s'allume en roulant, c'est quoi le problème ?"},
+  {icon:"🅿️",label:"Voyant frein / ABS",q:"Mon voyant ABS et frein à main sont allumés, est-ce dangereux ?"},
+  {icon:"💨",label:"Voyant TPMS pneus",q:"Mon voyant pression des pneus est allumé, que dois-je faire ?"},
+  {icon:"🔧",label:"Plan d'entretien",q:"Explique-moi le plan d'entretien complet d'une voiture : à quels kilométrages faire quoi ?"},
+  {icon:"⚙️",label:"Courroie de distribution",q:"Quand faut-il changer la courroie de distribution et quels sont les risques ?"},
+  {icon:"🧊",label:"Climatisation en panne",q:"Ma climatisation ne refroidit plus, quelles peuvent en être les causes et combien coûte la réparation ?"},
+  {icon:"💥",label:"Bruit suspect",q:"J'entends un bruit de claquement sous ma voiture quand je freine, d'où ça peut venir ?"},
+  {icon:"🚿",label:"Fuite de liquide",q:"Il y a une flaque sous ma voiture, comment identifier de quel liquide il s'agit ?"},
+  {icon:"📋",label:"Contrôle technique",q:"Quels sont les points de contrôle technique les plus souvent défaillants et comment les anticiper ?"},
+];
+
+const ACHAT_TOPICS = [
+  {icon:"🔍",label:"Vérifier une occasion",q:"Quels sont les points essentiels à vérifier avant d'acheter une voiture d'occasion pour ne pas se faire avoir ?"},
+  {icon:"💬",label:"Négocier le prix",q:"Comment négocier efficacement le prix d'une voiture chez un concessionnaire ?"},
+  {icon:"📜",label:"Démarches carte grise",q:"Quelles sont les démarches pour faire la carte grise lors d'une vente entre particuliers ?"},
+  {icon:"⚖️",label:"LOA vs LLD",q:"Quelle est la différence concrète entre LOA et LLD, avec les avantages et inconvénients de chacun ?"},
+  {icon:"💶",label:"Aides à l'achat VE",q:"Quelles sont les aides disponibles en 2025 pour acheter un véhicule électrique ?"},
+  {icon:"🏷️",label:"Vendre au bon prix",q:"Comment estimer le juste prix de vente de ma voiture d'occasion et éviter de la brader ?"},
+  {icon:"🤝",label:"Pièges achat neuf",q:"Quels sont les pièges à éviter lors de l'achat d'une voiture neuve chez un concessionnaire ?"},
+  {icon:"📊",label:"Malus écologique",q:"Comment fonctionne le malus écologique en 2025 et quel impact sur mon achat ?"},
+];
+
+// ═══════════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════════
+function buildDiagPrompt(answers) {
+  const lines = [];
+  STEPS.forEach(st => {
+    const v = answers[st.id]; if(!v) return;
+    const vals = Array.isArray(v)?v:[v];
+    const lbls = vals.map(x=>st.options.find(o=>o.value===x)?.label||x).join(", ");
+    lines.push(`• ${st.title} → ${lbls}`);
+  });
+  return `Voici le profil d'un utilisateur de Mon Conseiller Auto :\n\n${lines.join("\n")}\n\nGénère une recommandation personnalisée en 4 sections :\n\n1. 🚗 **Motorisation recommandée** — explique laquelle correspond le mieux et pourquoi.\n2. 💰 **Financement adapté** — conseille le mode le plus adapté avec ordres de grandeur concrets.\n3. 🎯 **2 ou 3 modèles à considérer** — modèles réels avec segment et fourchette de prix indicative.\n4. ⚠️ **Points de vigilance** — pièges ou questions à anticiper.\n\nTermine par une invitation à poser des questions. Sois précis, concret, chaleureux. Réponds en français.`;
+}
+
+async function callClaude(system, messages) {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method:"POST",
+    headers:{"Content-Type":"application/json","x-api-key":"METTEZ-VOTRE-CLES-ICI","anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+    body: JSON.stringify({ model:"claude-sonnet-4-6", max_tokens:1000, system, messages }),
+  });
+  const d = await res.json();
+  return d.content?.map(b=>b.text||"").join("")||"Désolé, une erreur est survenue.";
+}
+
+async function callClaudeWithImage(system, messages) {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method:"POST",
+    headers:{"Content-Type":"application/json","x-api-key":"METTEZ-VOTRE-CLES-ICI","anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+    body: JSON.stringify({ model:"claude-sonnet-4-6", max_tokens:1000, system, messages }),
+  });
+  const d = await res.json();
+  return d.content?.map(b=>b.text||"").join("")||"Désolé, une erreur est survenue.";
+}
+
+const SYS_ACHAT = `Tu es Mon Conseiller Auto, expert achat/vente automobile francophone. Slogan : "Un conseiller auto dans votre poche". Tu conseilles particuliers et pros sur : achat neuf/occasion, négociation, financement (LOA/LLD/crédit/comptant), démarches administratives (carte grise, cession), aides à l'achat VE, malus, ZFE, valeur de revente, pièges chez les concessionnaires. Sois direct, précis, concret, avec des chiffres quand tu les connais. Réponds en français.`;
+
+const SYS_SAV = `Tu es Mon Conseiller Auto, expert SAV et mécanique automobile. Slogan : "Un conseiller auto dans votre poche". Tu aides sur : voyants allumés et leur signification, pannes courantes et leur diagnostic, plans d'entretien (révisions, vidanges, courroies, freins…), coûts moyens de réparation, contrôle technique, conseils d'urgence. Si une photo de voyant ou de pièce est partagée, analyse-la et identifie le problème. Quand c'est grave, dis-le clairement. Quand il faut aller chez un garagiste, dis-le. Sois rassurant mais honnête. Réponds en français avec des emojis pour la lisibilité.`;
+
+// ═══════════════════════════════════════════════════════════════════
+// SHARED COMPONENTS
+// ═══════════════════════════════════════════════════════════════════
+function Avatar() {
+  return (
+    <div style={{width:30,height:30,background:"#0d0d1a",border:"1px solid #0a1a2a",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+      <svg width="14" height="14" viewBox="0 0 28 28" fill="none">
+        <circle cx="14" cy="14" r="13" stroke="#1565C0" strokeWidth="2.5"/>
+        <circle cx="14" cy="14" r="5" fill="#1565C0"/>
+      </svg>
+    </div>
+  );
+}
+
+function TypingDots() {
+  return (
+    <span style={{display:"flex",gap:5,alignItems:"center",padding:"3px 0"}}>
+      {[0,0.2,0.4].map((d,i)=>(
+        <span key={i} style={{width:7,height:7,borderRadius:"50%",background:"#1565C0",display:"inline-block",animation:"bounce 1.2s infinite",animationDelay:`${d}s`}}/>
+      ))}
+    </span>
+  );
+}
+
+function MsgBubble({msg}) {
+  const isUser = msg.role==="user";
+  const hasImage = msg.image;
+  return (
+    <div style={{display:"flex",gap:10,alignItems:"flex-end",justifyContent:isUser?"flex-end":"flex-start"}}>
+      {!isUser && <Avatar/>}
+      <div style={isUser
+        ? {background:"#1565C0",color:"#fff",padding:"12px 16px",borderRadius:"18px 18px 4px 18px",maxWidth:"78%",fontSize:13,lineHeight:1.65,fontFamily:"inherit"}
+        : {background:"#0d0d1a",border:"1px solid #1e1e2e",color:"#e0e0e0",padding:"14px 18px",borderRadius:"18px 18px 18px 4px",maxWidth:"85%",fontSize:13,lineHeight:1.75,fontFamily:"inherit"}}>
+        {hasImage && <img src={msg.image} alt="upload" style={{maxWidth:200,maxHeight:150,borderRadius:8,marginBottom:8,display:"block"}}/>}
+        {msg.content.split("\n").map((l,i,arr)=><span key={i}>{l}{i<arr.length-1&&<br/>}</span>)}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SAV PANEL (with photo upload)
+// ═══════════════════════════════════════════════════════════════════
+function SAVPanel() {
+  const [msgs, setMsgs] = useState([]);
+  const [inp, setInp] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [pendingImage, setPendingImage] = useState(null);
+  const [pendingImageB64, setPendingImageB64] = useState(null);
+  const bottomRef = useRef(null);
+  const fileRef = useRef(null);
+  useEffect(()=>{ bottomRef.current?.scrollIntoView({behavior:"smooth"}); },[msgs,loading]);
+
+  const handleFile = (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const full = ev.target.result;
+      setPendingImage(full);
+      setPendingImageB64(full.split(",")[1]);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const send = async (text) => {
+    const txt = text || inp.trim();
+    if((!txt && !pendingImage) || loading) return;
+    setInp("");
+
+    const displayMsg = {role:"user", content: txt || "Analysez cette photo de mon véhicule.", image: pendingImage};
+    const newMsgs = [...msgs, displayMsg];
+    setMsgs(newMsgs);
+    setLoading(true);
+
+    const imageB64 = pendingImageB64;
+    setPendingImage(null);
+    setPendingImageB64(null);
+
+    try {
+      let apiMessages;
+      if(imageB64) {
+        const content = [];
+        content.push({type:"image",source:{type:"base64",media_type:"image/jpeg",data:imageB64}});
+        content.push({type:"text",text: txt || "Analysez cette photo de mon véhicule et dites-moi ce que vous voyez, quel est le problème éventuel et que dois-je faire ?"});
+        apiMessages = [...msgs.filter(m=>!m.image).map(m=>({role:m.role,content:m.content})), {role:"user",content}];
+      } else {
+        apiMessages = newMsgs.map(m=>({role:m.role,content:m.content}));
+      }
+      const reply = await callClaudeWithImage(SYS_SAV, apiMessages);
+      setMsgs([...newMsgs,{role:"assistant",content:reply}]);
+    } catch {
+      setMsgs([...newMsgs,{role:"assistant",content:"❌ Erreur de connexion, veuillez réessayer."}]);
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",height:"calc(100vh - 140px)",paddingTop:20,gap:14}}>
+      {msgs.length===0 ? (
+        <div style={{flex:1,overflowY:"auto",display:"flex",flexDirection:"column",gap:18}}>
+          <div style={{background:"#0d0d1a",border:"1px solid #1e1e2e",borderRadius:16,padding:"22px 20px"}}>
+            <div style={{fontSize:17,fontWeight:800,marginBottom:8}}>🔧 Conseiller SAV & Entretien</div>
+            <div style={{fontSize:13,color:"#666",lineHeight:1.7}}>Un voyant allumé ? Un bruit suspect ? Décrivez votre problème ou <strong style={{color:"#1565C0"}}>envoyez une photo</strong> de votre tableau de bord, d'une pièce ou d'un voyant. Notre IA analyse et vous répond immédiatement.</div>
+          </div>
+          <div>
+            <div style={{fontSize:10,color:"#555",textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:10}}>Sujets fréquents</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:8}}>
+              {SAV_TOPICS.map((t,i)=>(
+                <button key={i} onClick={()=>send(t.q)}
+                  style={{background:"#0d0d1a",border:"1px solid #1e1e2e",borderRadius:12,padding:"12px 14px",cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:10,fontFamily:"inherit",transition:"border-color 0.15s"}}
+                  onMouseEnter={e=>e.currentTarget.style.borderColor="#1565C0"}
+                  onMouseLeave={e=>e.currentTarget.style.borderColor="#1e1e2e"}>
+                  <span style={{fontSize:18,flexShrink:0}}>{t.icon}</span>
+                  <span style={{fontSize:12,color:"#ccc",lineHeight:1.4}}>{t.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div ref={bottomRef}/>
+        </div>
+      ) : (
+        <div style={{flex:1,overflowY:"auto",display:"flex",flexDirection:"column",gap:14,paddingBottom:8}}>
+          {msgs.map((m,i)=><MsgBubble key={i} msg={m}/>)}
+          {loading&&(
+            <div style={{display:"flex",gap:10,alignItems:"flex-end"}}>
+              <Avatar/><div style={{background:"#0d0d1a",border:"1px solid #1e1e2e",padding:"14px 18px",borderRadius:"18px 18px 18px 4px"}}><TypingDots/></div>
+            </div>
+          )}
+          <div ref={bottomRef}/>
+        </div>
+      )}
+
+      {/* Image preview */}
+      {pendingImage && (
+        <div style={{display:"flex",alignItems:"center",gap:10,background:"#0d0d1a",border:"1px solid #1565C0",borderRadius:12,padding:"10px 14px"}}>
+          <img src={pendingImage} alt="preview" style={{width:50,height:50,objectFit:"cover",borderRadius:8}}/>
+          <span style={{fontSize:12,color:"#aaa",flex:1}}>Photo prête à envoyer</span>
+          <button onClick={()=>{setPendingImage(null);setPendingImageB64(null);}} style={{background:"transparent",border:"none",color:"#1565C0",cursor:"pointer",fontSize:18}}>×</button>
+        </div>
+      )}
+
+      {/* Input row */}
+      <div style={{display:"flex",gap:8,alignItems:"flex-end",background:"#0d0d1a",border:"1px solid #1e1e2e",borderRadius:14,padding:"10px 12px"}}>
+        <input type="file" accept="image/*" ref={fileRef} onChange={handleFile} style={{display:"none"}}/>
+        <button onClick={()=>fileRef.current?.click()}
+          style={{background:"#141424",border:"1px solid #2a2a3e",borderRadius:10,width:38,height:38,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:18}}>
+          📷
+        </button>
+        <textarea
+          style={{flex:1,background:"transparent",border:"none",outline:"none",color:"#F8F8F8",fontSize:13,fontFamily:"inherit",resize:"none",lineHeight:1.5}}
+          placeholder="Décrivez votre problème ou envoyez une photo…"
+          value={inp} rows={1}
+          onChange={e=>setInp(e.target.value)}
+          onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}}
+        />
+        <button
+          style={{background:"#1565C0",border:"none",borderRadius:10,width:38,height:38,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,opacity:(inp.trim()||pendingImage)&&!loading?1:0.35,transition:"opacity 0.2s"}}
+          onClick={()=>send()} disabled={(!inp.trim()&&!pendingImage)||loading}>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+            <path d="M22 2L11 13" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+            <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ACHAT PANEL
+// ═══════════════════════════════════════════════════════════════════
+function AchatPanel() {
+  const [msgs, setMsgs] = useState([]);
+  const [inp, setInp] = useState("");
+  const [loading, setLoading] = useState(false);
+  const bottomRef = useRef(null);
+  useEffect(()=>{ bottomRef.current?.scrollIntoView({behavior:"smooth"}); },[msgs,loading]);
+
+  const send = async (text) => {
+    const txt = text||inp.trim(); if(!txt||loading) return;
+    setInp("");
+    const newMsgs = [...msgs,{role:"user",content:txt}];
+    setMsgs(newMsgs); setLoading(true);
+    try {
+      const reply = await callClaude(SYS_ACHAT, newMsgs);
+      setMsgs([...newMsgs,{role:"assistant",content:reply}]);
+    } catch { setMsgs([...newMsgs,{role:"assistant",content:"❌ Erreur de connexion."}]); }
+    finally { setLoading(false); }
+  };
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",height:"calc(100vh - 140px)",paddingTop:20,gap:14}}>
+      {msgs.length===0 ? (
+        <div style={{flex:1,overflowY:"auto",display:"flex",flexDirection:"column",gap:18}}>
+          <div style={{background:"#0d0d1a",border:"1px solid #1e1e2e",borderRadius:16,padding:"22px 20px"}}>
+            <div style={{fontSize:17,fontWeight:800,marginBottom:8}}>🤝 Conseiller Achat & Vente</div>
+            <div style={{fontSize:13,color:"#666",lineHeight:1.7}}>Posez toutes vos questions sur l'achat ou la vente de votre véhicule : neuf, occasion, financement, négociation, démarches administratives, aides électrique, valeur de revente…</div>
+          </div>
+          <div>
+            <div style={{fontSize:10,color:"#555",textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:10}}>Questions fréquentes</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:8}}>
+              {ACHAT_TOPICS.map((t,i)=>(
+                <button key={i} onClick={()=>send(t.q)}
+                  style={{background:"#0d0d1a",border:"1px solid #1e1e2e",borderRadius:12,padding:"12px 14px",cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:10,fontFamily:"inherit",transition:"border-color 0.15s"}}
+                  onMouseEnter={e=>e.currentTarget.style.borderColor="#1565C0"}
+                  onMouseLeave={e=>e.currentTarget.style.borderColor="#1e1e2e"}>
+                  <span style={{fontSize:18,flexShrink:0}}>{t.icon}</span>
+                  <span style={{fontSize:12,color:"#ccc",lineHeight:1.4}}>{t.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div ref={bottomRef}/>
+        </div>
+      ) : (
+        <div style={{flex:1,overflowY:"auto",display:"flex",flexDirection:"column",gap:14,paddingBottom:8}}>
+          {msgs.map((m,i)=><MsgBubble key={i} msg={m}/>)}
+          {loading&&(
+            <div style={{display:"flex",gap:10,alignItems:"flex-end"}}>
+              <Avatar/><div style={{background:"#0d0d1a",border:"1px solid #1e1e2e",padding:"14px 18px",borderRadius:"18px 18px 18px 4px"}}><TypingDots/></div>
+            </div>
+          )}
+          <div ref={bottomRef}/>
+        </div>
+      )}
+      <div style={{display:"flex",gap:8,alignItems:"flex-end",background:"#0d0d1a",border:"1px solid #1e1e2e",borderRadius:14,padding:"10px 12px"}}>
+        <textarea style={{flex:1,background:"transparent",border:"none",outline:"none",color:"#F8F8F8",fontSize:13,fontFamily:"inherit",resize:"none",lineHeight:1.5}}
+          placeholder="Ex : Comment ne pas se faire avoir lors d'un achat d'occasion ?"
+          value={inp} rows={1}
+          onChange={e=>setInp(e.target.value)}
+          onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}}/>
+        <button style={{background:"#1565C0",border:"none",borderRadius:10,width:38,height:38,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,opacity:inp.trim()&&!loading?1:0.35}}
+          onClick={()=>send()} disabled={!inp.trim()||loading}>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+            <path d="M22 2L11 13" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+            <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SIMULATEUR DE FINANCEMENT
+// ═══════════════════════════════════════════════════════════════════
+function SimulateurTab() {
+  const [type, setType] = useState("credit");
+  const [prix, setPrix] = useState(20000);
+  const [apport, setApport] = useState(2000);
+  const [duree, setDuree] = useState(48);
+  const [taux, setTaux] = useState(4.5);
+  const [vr, setVr] = useState(30); // valeur résiduelle LOA en %
+  const [result, setResult] = useState(null);
+  const [aiComment, setAiComment] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+
+  const calcCredit = () => {
+    const capital = prix - apport;
+    const tauxM = taux / 100 / 12;
+    const mensualite = tauxM===0 ? capital/duree : capital * tauxM / (1 - Math.pow(1+tauxM,-duree));
+    const total = mensualite * duree + apport;
+    const coutCredit = total - prix;
+    return { mensualite: Math.round(mensualite), total: Math.round(total), coutCredit: Math.round(coutCredit), capital: Math.round(capital) };
+  };
+
+  const calcLOA = () => {
+    const vrEuros = prix * vr / 100;
+    const capital = prix - apport - vrEuros / Math.pow(1 + taux/100/12, duree);
+    const tauxM = taux / 100 / 12;
+    const mensualite = tauxM===0 ? capital/duree : capital * tauxM / (1 - Math.pow(1+tauxM,-duree));
+    return { mensualite: Math.round(Math.abs(mensualite)), vrEuros: Math.round(vrEuros), total: Math.round(Math.abs(mensualite)*duree+apport), capital: Math.round(prix-apport) };
+  };
+
+  const calc = () => {
+    const r = type==="credit" ? calcCredit() : calcLOA();
+    setResult(r);
+    setAiComment("");
+  };
+
+  const getAiAdvice = async () => {
+    if(!result) return;
+    setAiLoading(true);
+    const prompt = type==="credit"
+      ? `Un client veut acheter un véhicule à ${prix}€ avec un apport de ${apport}€, un crédit sur ${duree} mois à ${taux}% de taux. La mensualité calculée est de ${result.mensualite}€/mois, coût total du crédit : ${result.coutCredit}€. Donne un avis expert concis (5-6 lignes max) : est-ce un bon taux ? Des conseils pour optimiser ? Des alternatives à considérer ?`
+      : `Un client veut faire une LOA pour un véhicule à ${prix}€, apport ${apport}€, ${duree} mois, taux ${taux}%, valeur résiduelle ${vr}% (${result.vrEuros}€). Mensualité : ${result.mensualite}€/mois. Donne un avis expert concis (5-6 lignes max) : est-ce intéressant ? Points de vigilance sur cette LOA ? Que regarder dans le contrat ?`;
+    try {
+      const reply = await callClaude(`Tu es Mon Conseiller Auto, expert financement automobile. Sois concis, direct, avec des conseils pratiques. Réponds en français.`, [{role:"user",content:prompt}]);
+      setAiComment(reply);
+    } catch { setAiComment("❌ Erreur lors de l'analyse IA."); }
+    finally { setAiLoading(false); }
+  };
+
+  const SliderInput = ({label, value, min, max, step, onChange, suffix}) => (
+    <div style={{display:"flex",flexDirection:"column",gap:6}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <span style={{fontSize:12,color:"#888"}}>{label}</span>
+        <span style={{fontSize:14,fontWeight:700,color:"#1565C0"}}>{value.toLocaleString("fr-FR")}{suffix}</span>
+      </div>
+      <input type="range" min={min} max={max} step={step} value={value}
+        onChange={e=>onChange(Number(e.target.value))}
+        style={{width:"100%",accentColor:"#1565C0",height:4}}/>
+      <div style={{display:"flex",justifyContent:"space-between"}}>
+        <span style={{fontSize:10,color:"#444"}}>{min.toLocaleString("fr-FR")}{suffix}</span>
+        <span style={{fontSize:10,color:"#444"}}>{max.toLocaleString("fr-FR")}{suffix}</span>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{paddingTop:24,display:"flex",flexDirection:"column",gap:20,paddingBottom:40}}>
+      <div style={{background:"#0d0d1a",border:"1px solid #1e1e2e",borderRadius:16,padding:"22px 20px"}}>
+        <div style={{fontSize:17,fontWeight:800,marginBottom:4}}>💰 Simulateur de Financement</div>
+        <div style={{fontSize:12,color:"#555"}}>Calculez vos mensualités et obtenez l'avis de notre IA</div>
+      </div>
+
+      {/* Type selector */}
+      <div style={{display:"flex",gap:8}}>
+        {[{id:"credit",label:"💳 Crédit classique"},{id:"loa",label:"🔄 LOA / Leasing"}].map(t=>(
+          <button key={t.id} onClick={()=>{setType(t.id);setResult(null);setAiComment("");}}
+            style={{flex:1,padding:"12px",borderRadius:12,border:`2px solid ${type===t.id?"#1565C0":"#1e1e2e"}`,background:type===t.id?"rgba(21,101,192,0.1)":"#0d0d1a",color:type===t.id?"#fff":"#666",fontWeight:type===t.id?700:400,cursor:"pointer",fontFamily:"inherit",fontSize:13,transition:"all 0.15s"}}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Sliders */}
+      <div style={{background:"#0d0d1a",border:"1px solid #1e1e2e",borderRadius:16,padding:"22px 20px",display:"flex",flexDirection:"column",gap:20}}>
+        <SliderInput label="Prix du véhicule" value={prix} min={5000} max={100000} step={500} onChange={setPrix} suffix=" €"/>
+        <SliderInput label="Apport personnel" value={apport} min={0} max={Math.round(prix*0.5)} step={500} onChange={setApport} suffix=" €"/>
+        <SliderInput label="Durée" value={duree} min={12} max={84} step={12} onChange={setDuree} suffix=" mois"/>
+        <SliderInput label="Taux d'intérêt annuel" value={taux} min={0.5} max={12} step={0.1} onChange={setTaux} suffix=" %"/>
+        {type==="loa" && <SliderInput label="Valeur résiduelle" value={vr} min={10} max={50} step={1} onChange={setVr} suffix=" %"/>}
+        <button onClick={calc}
+          style={{background:"#1565C0",color:"#fff",border:"none",padding:"14px",borderRadius:12,fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+          Calculer mes mensualités →
+        </button>
+      </div>
+
+      {/* Result */}
+      {result && (
+        <div style={{background:"#0d0d1a",border:"1px solid #1565C0",borderRadius:16,padding:"22px 20px",display:"flex",flexDirection:"column",gap:16}}>
+          <div style={{fontSize:14,fontWeight:700,color:"#1565C0"}}>📊 Résultat de la simulation</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+            <div style={{background:"#07070f",borderRadius:12,padding:"16px",textAlign:"center"}}>
+              <div style={{fontSize:11,color:"#555",marginBottom:6}}>MENSUALITÉ</div>
+              <div style={{fontSize:28,fontWeight:900,color:"#1565C0"}}>{result.mensualite} €</div>
+              <div style={{fontSize:10,color:"#444"}}>/ mois pendant {duree} mois</div>
+            </div>
+            <div style={{background:"#07070f",borderRadius:12,padding:"16px",textAlign:"center"}}>
+              <div style={{fontSize:11,color:"#555",marginBottom:6}}>COÛT TOTAL</div>
+              <div style={{fontSize:28,fontWeight:900,color:"#fff"}}>{result.total.toLocaleString("fr-FR")} €</div>
+              <div style={{fontSize:10,color:"#444"}}>apport inclus</div>
+            </div>
+            {type==="credit" && (
+              <div style={{background:"#07070f",borderRadius:12,padding:"16px",textAlign:"center",gridColumn:"span 2"}}>
+                <div style={{fontSize:11,color:"#555",marginBottom:6}}>COÛT DU CRÉDIT</div>
+                <div style={{fontSize:22,fontWeight:700,color:"#888"}}>{result.coutCredit.toLocaleString("fr-FR")} €</div>
+                <div style={{fontSize:10,color:"#444"}}>intérêts et frais</div>
+              </div>
+            )}
+            {type==="loa" && (
+              <div style={{background:"#07070f",borderRadius:12,padding:"16px",textAlign:"center",gridColumn:"span 2"}}>
+                <div style={{fontSize:11,color:"#555",marginBottom:6}}>OPTION D'ACHAT EN FIN DE LOA</div>
+                <div style={{fontSize:22,fontWeight:700,color:"#888"}}>{result.vrEuros.toLocaleString("fr-FR")} €</div>
+                <div style={{fontSize:10,color:"#444"}}>{vr}% de la valeur du véhicule</div>
+              </div>
+            )}
+          </div>
+
+          {!aiComment && (
+            <button onClick={getAiAdvice} disabled={aiLoading}
+              style={{background:"transparent",border:"1px solid #1565C0",color:"#1565C0",padding:"12px",borderRadius:12,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",opacity:aiLoading?0.6:1}}>
+              {aiLoading ? "Analyse en cours…" : "✨ Obtenir l'avis de notre expert IA"}
+            </button>
+          )}
+          {aiComment && (
+            <div style={{background:"#07070f",border:"1px solid #1e1e2e",borderRadius:12,padding:"16px"}}>
+              <div style={{fontSize:11,color:"#1565C0",fontWeight:700,marginBottom:8}}>💡 AVIS EXPERT</div>
+              <div style={{fontSize:13,color:"#ccc",lineHeight:1.7}}>
+                {aiComment.split("\n").map((l,i,arr)=><span key={i}>{l}{i<arr.length-1&&<br/>}</span>)}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// DIAGNOSTIC TAB
+// ═══════════════════════════════════════════════════════════════════
+function ProgressBar({current,total}) {
+  return (
+    <div style={{display:"flex",alignItems:"center",gap:12}}>
+      <div style={{flex:1,height:4,background:"#1a1a2e",borderRadius:4,overflow:"hidden"}}>
+        <div style={{height:"100%",background:"#1565C0",borderRadius:4,transition:"width 0.4s ease",width:`${Math.round(current/total*100)}%`}}/>
+      </div>
+      <span style={{fontSize:11,color:"#555",flexShrink:0}}>{current}/{total}</span>
+    </div>
+  );
+}
+
+function OptionCard({option,selected,onClick}) {
+  return (
+    <button onClick={onClick}
+      style={{width:"100%",border:`1px solid ${selected?"#1565C0":"#1e1e2e"}`,borderRadius:12,padding:"13px 16px",cursor:"pointer",textAlign:"left",fontFamily:"inherit",background:selected?"rgba(21,101,192,0.08)":"#0d0d1a",transition:"all 0.15s"}}
+      onMouseEnter={e=>{if(!selected)e.currentTarget.style.borderColor="#3a3a5e";}}
+      onMouseLeave={e=>{if(!selected)e.currentTarget.style.borderColor="#1e1e2e";}}>
+      <div style={{display:"flex",alignItems:"center",gap:12}}>
+        <span style={{fontSize:20,flexShrink:0,width:28,textAlign:"center"}}>{option.icon}</span>
+        <div style={{flex:1}}>
+          <div style={{fontSize:14,fontWeight:600,color:selected?"#fff":"#ccc"}}>{option.label}</div>
+          {option.desc&&<div style={{fontSize:11,color:"#555",marginTop:2}}>{option.desc}</div>}
+        </div>
+        <div style={{width:20,height:20,borderRadius:6,border:`2px solid ${selected?"#1565C0":"#333"}`,background:selected?"#1565C0":"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+          {selected&&<span style={{color:"#fff",fontSize:10,fontWeight:700}}>✓</span>}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function DiagnosticTab() {
+  const [phase, setPhase] = useState("home");
+  const [stepIdx, setStepIdx] = useState(0);
+  const [answers, setAnswers] = useState({});
+  const [messages, setMessages] = useState([]);
+  const [chatInp, setChatInp] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const bottomRef = useRef(null);
+  useEffect(()=>{ bottomRef.current?.scrollIntoView({behavior:"smooth"}); },[messages,chatLoading]);
+
+  const step = STEPS[stepIdx];
+  const answer = answers[step?.id];
+  const toggle = (val) => {
+    if(step.type==="single") { setAnswers(a=>({...a,[step.id]:val})); }
+    else {
+      const cur = answers[step.id]||[]; const max=step.max||99;
+      if(cur.includes(val)) setAnswers(a=>({...a,[step.id]:cur.filter(v=>v!==val)}));
+      else if(cur.length<max) setAnswers(a=>({...a,[step.id]:[...cur,val]}));
+    }
+  };
+  const canNext = step?.type==="single"?!!answer:(answer?.length||0)>0;
+
+  const next = async () => {
+    if(stepIdx<STEPS.length-1) { setStepIdx(i=>i+1); return; }
+    setPhase("loading");
+    try {
+      const reply = await callClaude(`Tu es Mon Conseiller Auto, expert automobile francophone. Sois précis, concret, chaleureux.`, [{role:"user",content:buildDiagPrompt({...answers})}]);
+      setMessages([{role:"assistant",content:reply}]);
+      setPhase("result");
+    } catch { setMessages([{role:"assistant",content:"❌ Erreur, veuillez réessayer."}]); setPhase("result"); }
+  };
+
+  const sendChat = async () => {
+    const txt = chatInp.trim(); if(!txt||chatLoading) return;
+    setChatInp("");
+    const history = [{role:"user",content:buildDiagPrompt(answers)},...messages,{role:"user",content:txt}];
+    setMessages(m=>[...m,{role:"user",content:txt}]);
+    setChatLoading(true);
+    try {
+      const reply = await callClaude(`Tu es Mon Conseiller Auto. Expert automobile francophone. Sois précis, concret, chaleureux.`, history);
+      setMessages(m=>[...m,{role:"assistant",content:reply}]);
+    } catch { setMessages(m=>[...m,{role:"assistant",content:"❌ Erreur."}]); }
+    finally { setChatLoading(false); }
+  };
+
+  const reset = () => { setPhase("home"); setStepIdx(0); setAnswers({}); setMessages([]); setChatInp(""); };
+
+  if(phase==="home") return (
+    <div style={{display:"flex",flexDirection:"column",gap:40,paddingTop:36}}>
+      <div style={{display:"flex",flexDirection:"column",alignItems:"center",textAlign:"center",gap:16}}>
+        <div style={{display:"inline-block",background:"rgba(21,101,192,0.1)",border:"1px solid rgba(21,101,192,0.3)",color:"#1565C0",padding:"5px 14px",borderRadius:20,fontSize:11,letterSpacing:"0.08em",textTransform:"uppercase",fontWeight:600}}>Diagnostic personnalisé</div>
+        <h1 style={{fontSize:44,fontWeight:900,lineHeight:1.1,letterSpacing:"-0.02em"}}>Trouvez le véhicule<br/><span style={{color:"#1565C0"}}>fait pour vous</span></h1>
+        <p style={{fontSize:15,color:"#666",lineHeight:1.8,maxWidth:480}}>Répondez à {STEPS.length} questions en 2 minutes. Notre IA analyse votre profil et vous recommande la motorisation, le financement et les modèles qui vous correspondent vraiment.</p>
+        <div style={{display:"flex",gap:28,justifyContent:"center"}}>
+          {[["2 min","pour répondre"],["7","questions clés"],["100%","personnalisé"]].map(([n,l])=>(
+            <div key={n} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
+              <span style={{fontSize:26,fontWeight:900,color:"#1565C0"}}>{n}</span>
+              <span style={{fontSize:10,color:"#555",letterSpacing:"0.06em",textTransform:"uppercase"}}>{l}</span>
+            </div>
+          ))}
+        </div>
+        <button style={{background:"#1565C0",color:"#fff",border:"none",padding:"16px 40px",borderRadius:12,fontSize:16,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>setPhase("quiz")}>
+          Démarrer mon diagnostic →
+        </button>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(210px,1fr))",gap:12}}>
+        {[{icon:"🚗",t:"Motorisation",d:"Électrique, hybride, diesel, essence : ce qui colle à votre usage réel."},{icon:"💰",t:"Financement",d:"LOA, LLD, crédit ou comptant — avantages fiscaux inclus pour les pros."},{icon:"🎯",t:"Modèles concrets",d:"Des recommandations de véhicules réels, pas des généralités."}].map(c=>(
+          <div key={c.t} style={{background:"#0d0d1a",border:"1px solid #141424",borderRadius:14,padding:"20px 18px",display:"flex",flexDirection:"column",gap:10}}>
+            <span style={{fontSize:26}}>{c.icon}</span>
+            <div style={{fontSize:14,fontWeight:700}}>{c.t}</div>
+            <div style={{fontSize:12,color:"#555",lineHeight:1.6}}>{c.d}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  if(phase==="quiz") return (
+    <div style={{display:"flex",flexDirection:"column",gap:20,paddingTop:28,maxWidth:600,margin:"0 auto",width:"100%"}}>
+      <ProgressBar current={stepIdx+1} total={STEPS.length}/>
+      <div style={{background:"#0d0d1a",border:"1px solid #141424",borderRadius:18,padding:"26px 22px",display:"flex",flexDirection:"column",gap:14}}>
+        <div style={{fontSize:10,color:"#1565C0",fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase"}}>Étape {stepIdx+1} sur {STEPS.length}</div>
+        <h2 style={{fontSize:20,fontWeight:800,lineHeight:1.3}}>{step.title}</h2>
+        <p style={{fontSize:13,color:"#666",marginTop:-6}}>{step.subtitle}</p>
+        {step.max&&<p style={{fontSize:11,color:"#1565C0",background:"rgba(21,101,192,0.08)",padding:"4px 10px",borderRadius:6,display:"inline-block",alignSelf:"flex-start"}}>Choisissez jusqu'à {step.max}</p>}
+        <div style={{display:"flex",flexDirection:"column",gap:7}}>
+          {step.options.map(opt=>{
+            const sel = step.type==="single"?answer===opt.value:(answer||[]).includes(opt.value);
+            return <OptionCard key={opt.value} option={opt} selected={sel} onClick={()=>toggle(opt.value)}/>;
+          })}
+        </div>
+        <div style={{display:"flex",justifyContent:"space-between",marginTop:4}}>
+          <button style={{background:"transparent",border:"1px solid #222238",color:stepIdx>0?"#888":"transparent",padding:"11px 20px",borderRadius:10,fontSize:13,cursor:stepIdx>0?"pointer":"default",fontFamily:"inherit"}} onClick={()=>stepIdx>0&&setStepIdx(i=>i-1)} disabled={stepIdx===0}>← Précédent</button>
+          <button style={{background:"#1565C0",color:"#fff",border:"none",padding:"12px 24px",borderRadius:10,fontSize:13,fontWeight:700,cursor:canNext?"pointer":"not-allowed",fontFamily:"inherit",opacity:canNext?1:0.35}} onClick={canNext?next:undefined} disabled={!canNext}>
+            {stepIdx===STEPS.length-1?"Obtenir mon diagnostic ✨":"Suivant →"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  if(phase==="loading") return (
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flex:1,gap:20,paddingTop:100}}>
+      <svg width="80" height="80" viewBox="0 0 80 80">
+        <circle cx="40" cy="40" r="34" stroke="#1a1a2e" strokeWidth="6" fill="none"/>
+        <circle cx="40" cy="40" r="34" stroke="#1565C0" strokeWidth="6" fill="none" strokeDasharray="60 150" strokeLinecap="round">
+          <animateTransform attributeName="transform" type="rotate" from="0 40 40" to="360 40 40" dur="1s" repeatCount="indefinite"/>
+        </circle>
+      </svg>
+      <p style={{fontSize:18,fontWeight:700}}>Analyse de votre profil…</p>
+      <p style={{fontSize:13,color:"#555",textAlign:"center",maxWidth:340}}>Notre IA croise vos réponses pour vous proposer les meilleures options</p>
+    </div>
+  );
+
+  const chips = Object.entries(answers).slice(0,4).flatMap(([key,val])=>{
+    const st=STEPS.find(s=>s.id===key); const vals=Array.isArray(val)?val:[val];
+    return vals.map(v=>st?.options.find(o=>o.value===v)?.label||v);
+  });
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",paddingTop:20,height:"calc(100vh - 140px)"}}>
+      <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:7,marginBottom:14}}>
+        <span style={{fontSize:10,color:"#555",textTransform:"uppercase",letterSpacing:"0.08em",marginRight:4}}>Profil :</span>
+        {chips.map((c,i)=><span key={i} style={{background:"#0d0d1a",border:"1px solid #1e1e2e",borderRadius:20,padding:"3px 10px",fontSize:11,color:"#888"}}>{c}</span>)}
+        <button style={{marginLeft:"auto",background:"transparent",border:"1px solid #1e1e2e",color:"#555",padding:"3px 10px",borderRadius:20,fontSize:11,cursor:"pointer",fontFamily:"inherit"}} onClick={reset}>↺ Refaire</button>
+      </div>
+      <div style={{flex:1,overflowY:"auto",display:"flex",flexDirection:"column",gap:14,paddingBottom:8}}>
+        {messages.map((m,i)=><MsgBubble key={i} msg={m}/>)}
+        {chatLoading&&(
+          <div style={{display:"flex",gap:10,alignItems:"flex-end"}}><Avatar/><div style={{background:"#0d0d1a",border:"1px solid #1e1e2e",padding:"14px 18px",borderRadius:"18px 18px 18px 4px"}}><TypingDots/></div></div>
+        )}
+        <div ref={bottomRef}/>
+      </div>
+      <div style={{display:"flex",gap:8,alignItems:"flex-end",background:"#0d0d1a",border:"1px solid #1e1e2e",borderRadius:14,padding:"10px 12px"}}>
+        <textarea style={{flex:1,background:"transparent",border:"none",outline:"none",color:"#F8F8F8",fontSize:13,fontFamily:"inherit",resize:"none",lineHeight:1.5}}
+          placeholder="Posez une question sur votre recommandation…"
+          value={chatInp} rows={1}
+          onChange={e=>setChatInp(e.target.value)}
+          onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendChat();}}}/>
+        <button style={{background:"#1565C0",border:"none",borderRadius:10,width:38,height:38,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,opacity:chatInp.trim()&&!chatLoading?1:0.35}}
+          onClick={sendChat} disabled={!chatInp.trim()||chatLoading}>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+            <path d="M22 2L11 13" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+            <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// MAIN APP
+// ═══════════════════════════════════════════════════════════════════
+const TABS = [
+  {id:"diag",  icon:"◈", label:"DIAGNOSTIC"},
+  {id:"achat", icon:"◎", label:"ACHAT & VENTE"},
+  {id:"simul", icon:"◆", label:"SIMULATEUR"},
+  {id:"sav",   icon:"◉", label:"SAV & ENTRETIEN"},
+];
+
+function App() {
+  const [tab, setTab] = useState("diag");
+
+  return (
+    <div style={{fontFamily:"'Inter',sans-serif",background:"#07070f",minHeight:"100vh",color:"#F8F8F8",position:"relative",overflow:"hidden"}}>
+      <div style={{position:"fixed",inset:0,backgroundImage:"linear-gradient(rgba(21,101,192,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(21,101,192,0.025) 1px,transparent 1px)",backgroundSize:"44px 44px",pointerEvents:"none",zIndex:0}}/>
+
+      {/* HEADER */}
+      <header style={{position:"sticky",top:0,zIndex:100,background:"rgba(7,7,15,0.97)",borderBottom:"1px solid #0a1a2a",backdropFilter:"blur(14px)"}}>
+        <div style={{maxWidth:880,margin:"0 auto",padding:"0 20px"}}>
+          {/* Logo */}
+          <div style={{paddingTop:8,paddingBottom:4,display:"flex",alignItems:"center",gap:12}}>
+            <svg width="52" height="52" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <ellipse cx="50" cy="58" rx="18" ry="20" fill="#1565C0"/>
+              <path d="M32 50 Q18 68 16 88 Q34 76 50 80 Q56 66 53 52 Z" fill="#E53935" opacity="0.95"/>
+              <rect x="38" y="76" width="10" height="16" rx="4" fill="#1565C0"/>
+              <rect x="52" y="76" width="10" height="16" rx="4" fill="#1565C0"/>
+              <rect x="36" y="89" width="14" height="8" rx="3" fill="#E53935"/>
+              <rect x="50" y="89" width="14" height="8" rx="3" fill="#E53935"/>
+              <circle cx="50" cy="26" r="14" fill="#FDDBB4"/>
+              <path d="M36 20 Q38 8 50 7 Q62 8 64 20 Q60 12 50 11 Q40 12 36 20 Z" fill="#2a1a08"/>
+              <path d="M36 22 Q38 16 44 16 Q50 15 56 16 Q62 16 64 22 L62 24 Q56 19 50 19 Q44 19 38 24 Z" fill="#1565C0"/>
+              <ellipse cx="43" cy="23" rx="4" ry="3" fill="white"/>
+              <ellipse cx="43" cy="23" rx="2" ry="2" fill="#0D47A1"/>
+              <ellipse cx="57" cy="23" rx="4" ry="3" fill="white"/>
+              <ellipse cx="57" cy="23" rx="2" ry="2" fill="#0D47A1"/>
+              <path d="M44 33 Q50 38 56 33" fill="none" stroke="#c07050" strokeWidth="1.5" strokeLinecap="round"/>
+              <path d="M32 54 Q20 62 16 74" stroke="#1565C0" strokeWidth="8" strokeLinecap="round"/>
+              <path d="M68 54 Q80 44 86 32" stroke="#1565C0" strokeWidth="8" strokeLinecap="round"/>
+              <rect x="82" y="18" width="14" height="22" rx="5" fill="#0a0d1a" stroke="#42A5F5" strokeWidth="1.5"/>
+              <circle cx="89" cy="25" r="4" fill="none" stroke="#42A5F5" strokeWidth="1.2"/>
+              <circle cx="89" cy="25" r="2" fill="#42A5F5"/>
+              <rect x="84" y="31" width="10" height="4" rx="2" fill="#1565C0"/>
+              <polygon points="50,48 52,54 58,54 53,58 55,64 50,60 45,64 47,58 42,54 48,54" fill="white" opacity="0.9"/>
+            </svg>
+            <div>
+              <div style={{fontSize:18,fontWeight:900,letterSpacing:"0.08em",lineHeight:1.1,color:"#fff"}}>MON CONSEILLER AUTO</div>
+              <div style={{fontSize:11,color:"#42A5F5",letterSpacing:"0.06em",marginTop:3,fontWeight:500}}>Un conseiller auto dans votre poche</div>
+            </div>
+          </div>
+          {/* Tabs */}
+          <div style={{display:"flex",gap:0,overflowX:"auto"}}>
+            {TABS.map(t=>{
+              const active = tab===t.id;
+              return (
+                <button key={t.id} onClick={()=>setTab(t.id)}
+                  style={{background:active?"rgba(21,101,192,0.12)":"transparent",border:"none",borderBottom:`2px solid ${active?"#42A5F5":"transparent"}`,borderTop:"2px solid transparent",color:active?"#42A5F5":"#444",padding:"12px 22px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:8,transition:"all 0.15s",whiteSpace:"nowrap",flexShrink:0,letterSpacing:"0.1em"}}>
+                  <span style={{fontSize:10,color:active?"#42A5F5":"#333",fontWeight:900}}>{t.icon}</span>
+                  <span>{t.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </header>
+
+      {/* MAIN */}
+      <main style={{position:"relative",zIndex:1,maxWidth:880,margin:"0 auto",padding:"0 20px 60px"}}>
+        {tab==="diag"  && <DiagnosticTab/>}
+        {tab==="achat" && <AchatPanel/>}
+        {tab==="simul" && <SimulateurTab/>}
+        {tab==="sav"   && <SAVPanel/>}
+      </main>
+
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{background:#07070f}
+        @keyframes bounce{0%,80%,100%{transform:translateY(0);opacity:0.4}40%{transform:translateY(-5px);opacity:1}}
+        ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:#07070f}::-webkit-scrollbar-thumb{background:#1565C0;border-radius:2px}
+        textarea::placeholder{color:#444}
+        input[type=range]{cursor:pointer}
+      `}</style>
+    </div>
+  );
+}
+
+
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+  </script>
+</body>
+</html>
