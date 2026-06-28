@@ -4,9 +4,6 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Mon Conseiller Auto</title>
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet"/>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -21,11 +18,18 @@
 </head>
 <body>
   <div id="root"></div>
-  <script type="text/babel" data-presets="react">
+ 
+  <!-- React & ReactDOM UMD -->
+  <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+  <!-- Babel standalone -->
+  <script src="https://unpkg.com/@babel/standalone@7.23.2/babel.min.js"></script>
+ 
+  <script type="text/babel">
 const { useState, useRef, useEffect } = React;
-
-
-
+ 
+ 
+ 
 // ═══════════════════════════════════════════════════════════════════
 // DATA
 // ═══════════════════════════════════════════════════════════════════
@@ -79,7 +83,7 @@ const STEPS = [
     {value:"projet_6mois",label:"Projet dans 3–6 mois",icon:"📅",desc:"Temps de comparer"},
   ]},
 ];
-
+ 
 const SAV_TOPICS = [
   {icon:"🔔",label:"Voyant moteur allumé",q:"Mon voyant moteur est allumé, qu'est-ce que ça signifie et est-ce grave ?"},
   {icon:"🛢️",label:"Voyant huile",q:"Mon voyant huile est allumé, que dois-je faire immédiatement ?"},
@@ -94,7 +98,7 @@ const SAV_TOPICS = [
   {icon:"🚿",label:"Fuite de liquide",q:"Il y a une flaque sous ma voiture, comment identifier de quel liquide il s'agit ?"},
   {icon:"📋",label:"Contrôle technique",q:"Quels sont les points de contrôle technique les plus souvent défaillants et comment les anticiper ?"},
 ];
-
+ 
 const ACHAT_TOPICS = [
   {icon:"🔍",label:"Vérifier une occasion",q:"Quels sont les points essentiels à vérifier avant d'acheter une voiture d'occasion pour ne pas se faire avoir ?"},
   {icon:"💬",label:"Négocier le prix",q:"Comment négocier efficacement le prix d'une voiture chez un concessionnaire ?"},
@@ -105,7 +109,7 @@ const ACHAT_TOPICS = [
   {icon:"🤝",label:"Pièges achat neuf",q:"Quels sont les pièges à éviter lors de l'achat d'une voiture neuve chez un concessionnaire ?"},
   {icon:"📊",label:"Malus écologique",q:"Comment fonctionne le malus écologique en 2025 et quel impact sur mon achat ?"},
 ];
-
+ 
 // ═══════════════════════════════════════════════════════════════════
 // HELPERS
 // ═══════════════════════════════════════════════════════════════════
@@ -119,7 +123,7 @@ function buildDiagPrompt(answers) {
   });
   return `Voici le profil d'un utilisateur de Mon Conseiller Auto :\n\n${lines.join("\n")}\n\nGénère une recommandation personnalisée en 4 sections :\n\n1. 🚗 **Motorisation recommandée** — explique laquelle correspond le mieux et pourquoi.\n2. 💰 **Financement adapté** — conseille le mode le plus adapté avec ordres de grandeur concrets.\n3. 🎯 **2 ou 3 modèles à considérer** — modèles réels avec segment et fourchette de prix indicative.\n4. ⚠️ **Points de vigilance** — pièges ou questions à anticiper.\n\nTermine par une invitation à poser des questions. Sois précis, concret, chaleureux. Réponds en français.`;
 }
-
+ 
 async function callClaude(system, messages) {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method:"POST",
@@ -129,7 +133,7 @@ async function callClaude(system, messages) {
   const d = await res.json();
   return d.content?.map(b=>b.text||"").join("")||"Désolé, une erreur est survenue.";
 }
-
+ 
 async function callClaudeWithImage(system, messages) {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method:"POST",
@@ -139,11 +143,11 @@ async function callClaudeWithImage(system, messages) {
   const d = await res.json();
   return d.content?.map(b=>b.text||"").join("")||"Désolé, une erreur est survenue.";
 }
-
+ 
 const SYS_ACHAT = `Tu es Mon Conseiller Auto, expert achat/vente automobile francophone. Slogan : "Un conseiller auto dans votre poche". Tu conseilles particuliers et pros sur : achat neuf/occasion, négociation, financement (LOA/LLD/crédit/comptant), démarches administratives (carte grise, cession), aides à l'achat VE, malus, ZFE, valeur de revente, pièges chez les concessionnaires. Sois direct, précis, concret, avec des chiffres quand tu les connais. Réponds en français.`;
-
+ 
 const SYS_SAV = `Tu es Mon Conseiller Auto, expert SAV et mécanique automobile. Slogan : "Un conseiller auto dans votre poche". Tu aides sur : voyants allumés et leur signification, pannes courantes et leur diagnostic, plans d'entretien (révisions, vidanges, courroies, freins…), coûts moyens de réparation, contrôle technique, conseils d'urgence. Si une photo de voyant ou de pièce est partagée, analyse-la et identifie le problème. Quand c'est grave, dis-le clairement. Quand il faut aller chez un garagiste, dis-le. Sois rassurant mais honnête. Réponds en français avec des emojis pour la lisibilité.`;
-
+ 
 // ═══════════════════════════════════════════════════════════════════
 // SHARED COMPONENTS
 // ═══════════════════════════════════════════════════════════════════
@@ -157,7 +161,7 @@ function Avatar() {
     </div>
   );
 }
-
+ 
 function TypingDots() {
   return (
     <span style={{display:"flex",gap:5,alignItems:"center",padding:"3px 0"}}>
@@ -167,7 +171,7 @@ function TypingDots() {
     </span>
   );
 }
-
+ 
 function MsgBubble({msg}) {
   const isUser = msg.role==="user";
   const hasImage = msg.image;
@@ -183,7 +187,7 @@ function MsgBubble({msg}) {
     </div>
   );
 }
-
+ 
 // ═══════════════════════════════════════════════════════════════════
 // SAV PANEL (with photo upload)
 // ═══════════════════════════════════════════════════════════════════
@@ -196,7 +200,7 @@ function SAVPanel() {
   const bottomRef = useRef(null);
   const fileRef = useRef(null);
   useEffect(()=>{ bottomRef.current?.scrollIntoView({behavior:"smooth"}); },[msgs,loading]);
-
+ 
   const handleFile = (e) => {
     const file = e.target.files[0];
     if(!file) return;
@@ -208,21 +212,21 @@ function SAVPanel() {
     };
     reader.readAsDataURL(file);
   };
-
+ 
   const send = async (text) => {
     const txt = text || inp.trim();
     if((!txt && !pendingImage) || loading) return;
     setInp("");
-
+ 
     const displayMsg = {role:"user", content: txt || "Analysez cette photo de mon véhicule.", image: pendingImage};
     const newMsgs = [...msgs, displayMsg];
     setMsgs(newMsgs);
     setLoading(true);
-
+ 
     const imageB64 = pendingImageB64;
     setPendingImage(null);
     setPendingImageB64(null);
-
+ 
     try {
       let apiMessages;
       if(imageB64) {
@@ -239,7 +243,7 @@ function SAVPanel() {
       setMsgs([...newMsgs,{role:"assistant",content:"❌ Erreur de connexion, veuillez réessayer."}]);
     } finally { setLoading(false); }
   };
-
+ 
   return (
     <div style={{display:"flex",flexDirection:"column",height:"calc(100vh - 140px)",paddingTop:20,gap:14}}>
       {msgs.length===0 ? (
@@ -275,7 +279,7 @@ function SAVPanel() {
           <div ref={bottomRef}/>
         </div>
       )}
-
+ 
       {/* Image preview */}
       {pendingImage && (
         <div style={{display:"flex",alignItems:"center",gap:10,background:"#0d0d1a",border:"1px solid #1565C0",borderRadius:12,padding:"10px 14px"}}>
@@ -284,7 +288,7 @@ function SAVPanel() {
           <button onClick={()=>{setPendingImage(null);setPendingImageB64(null);}} style={{background:"transparent",border:"none",color:"#1565C0",cursor:"pointer",fontSize:18}}>×</button>
         </div>
       )}
-
+ 
       {/* Input row */}
       <div style={{display:"flex",gap:8,alignItems:"flex-end",background:"#0d0d1a",border:"1px solid #1e1e2e",borderRadius:14,padding:"10px 12px"}}>
         <input type="file" accept="image/*" ref={fileRef} onChange={handleFile} style={{display:"none"}}/>
@@ -311,7 +315,7 @@ function SAVPanel() {
     </div>
   );
 }
-
+ 
 // ═══════════════════════════════════════════════════════════════════
 // ACHAT PANEL
 // ═══════════════════════════════════════════════════════════════════
@@ -321,7 +325,7 @@ function AchatPanel() {
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef(null);
   useEffect(()=>{ bottomRef.current?.scrollIntoView({behavior:"smooth"}); },[msgs,loading]);
-
+ 
   const send = async (text) => {
     const txt = text||inp.trim(); if(!txt||loading) return;
     setInp("");
@@ -333,7 +337,7 @@ function AchatPanel() {
     } catch { setMsgs([...newMsgs,{role:"assistant",content:"❌ Erreur de connexion."}]); }
     finally { setLoading(false); }
   };
-
+ 
   return (
     <div style={{display:"flex",flexDirection:"column",height:"calc(100vh - 140px)",paddingTop:20,gap:14}}>
       {msgs.length===0 ? (
@@ -386,7 +390,7 @@ function AchatPanel() {
     </div>
   );
 }
-
+ 
 // ═══════════════════════════════════════════════════════════════════
 // SIMULATEUR DE FINANCEMENT
 // ═══════════════════════════════════════════════════════════════════
@@ -400,7 +404,7 @@ function SimulateurTab() {
   const [result, setResult] = useState(null);
   const [aiComment, setAiComment] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
-
+ 
   const calcCredit = () => {
     const capital = prix - apport;
     const tauxM = taux / 100 / 12;
@@ -409,7 +413,7 @@ function SimulateurTab() {
     const coutCredit = total - prix;
     return { mensualite: Math.round(mensualite), total: Math.round(total), coutCredit: Math.round(coutCredit), capital: Math.round(capital) };
   };
-
+ 
   const calcLOA = () => {
     const vrEuros = prix * vr / 100;
     const capital = prix - apport - vrEuros / Math.pow(1 + taux/100/12, duree);
@@ -417,13 +421,13 @@ function SimulateurTab() {
     const mensualite = tauxM===0 ? capital/duree : capital * tauxM / (1 - Math.pow(1+tauxM,-duree));
     return { mensualite: Math.round(Math.abs(mensualite)), vrEuros: Math.round(vrEuros), total: Math.round(Math.abs(mensualite)*duree+apport), capital: Math.round(prix-apport) };
   };
-
+ 
   const calc = () => {
     const r = type==="credit" ? calcCredit() : calcLOA();
     setResult(r);
     setAiComment("");
   };
-
+ 
   const getAiAdvice = async () => {
     if(!result) return;
     setAiLoading(true);
@@ -436,7 +440,7 @@ function SimulateurTab() {
     } catch { setAiComment("❌ Erreur lors de l'analyse IA."); }
     finally { setAiLoading(false); }
   };
-
+ 
   const SliderInput = ({label, value, min, max, step, onChange, suffix}) => (
     <div style={{display:"flex",flexDirection:"column",gap:6}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -452,14 +456,14 @@ function SimulateurTab() {
       </div>
     </div>
   );
-
+ 
   return (
     <div style={{paddingTop:24,display:"flex",flexDirection:"column",gap:20,paddingBottom:40}}>
       <div style={{background:"#0d0d1a",border:"1px solid #1e1e2e",borderRadius:16,padding:"22px 20px"}}>
         <div style={{fontSize:17,fontWeight:800,marginBottom:4}}>💰 Simulateur de Financement</div>
         <div style={{fontSize:12,color:"#555"}}>Calculez vos mensualités et obtenez l'avis de notre IA</div>
       </div>
-
+ 
       {/* Type selector */}
       <div style={{display:"flex",gap:8}}>
         {[{id:"credit",label:"💳 Crédit classique"},{id:"loa",label:"🔄 LOA / Leasing"}].map(t=>(
@@ -469,7 +473,7 @@ function SimulateurTab() {
           </button>
         ))}
       </div>
-
+ 
       {/* Sliders */}
       <div style={{background:"#0d0d1a",border:"1px solid #1e1e2e",borderRadius:16,padding:"22px 20px",display:"flex",flexDirection:"column",gap:20}}>
         <SliderInput label="Prix du véhicule" value={prix} min={5000} max={100000} step={500} onChange={setPrix} suffix=" €"/>
@@ -482,7 +486,7 @@ function SimulateurTab() {
           Calculer mes mensualités →
         </button>
       </div>
-
+ 
       {/* Result */}
       {result && (
         <div style={{background:"#0d0d1a",border:"1px solid #1565C0",borderRadius:16,padding:"22px 20px",display:"flex",flexDirection:"column",gap:16}}>
@@ -513,7 +517,7 @@ function SimulateurTab() {
               </div>
             )}
           </div>
-
+ 
           {!aiComment && (
             <button onClick={getAiAdvice} disabled={aiLoading}
               style={{background:"transparent",border:"1px solid #1565C0",color:"#1565C0",padding:"12px",borderRadius:12,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",opacity:aiLoading?0.6:1}}>
@@ -533,7 +537,7 @@ function SimulateurTab() {
     </div>
   );
 }
-
+ 
 // ═══════════════════════════════════════════════════════════════════
 // DIAGNOSTIC TAB
 // ═══════════════════════════════════════════════════════════════════
@@ -547,7 +551,7 @@ function ProgressBar({current,total}) {
     </div>
   );
 }
-
+ 
 function OptionCard({option,selected,onClick}) {
   return (
     <button onClick={onClick}
@@ -567,7 +571,7 @@ function OptionCard({option,selected,onClick}) {
     </button>
   );
 }
-
+ 
 function DiagnosticTab() {
   const [phase, setPhase] = useState("home");
   const [stepIdx, setStepIdx] = useState(0);
@@ -577,7 +581,7 @@ function DiagnosticTab() {
   const [chatLoading, setChatLoading] = useState(false);
   const bottomRef = useRef(null);
   useEffect(()=>{ bottomRef.current?.scrollIntoView({behavior:"smooth"}); },[messages,chatLoading]);
-
+ 
   const step = STEPS[stepIdx];
   const answer = answers[step?.id];
   const toggle = (val) => {
@@ -589,7 +593,7 @@ function DiagnosticTab() {
     }
   };
   const canNext = step?.type==="single"?!!answer:(answer?.length||0)>0;
-
+ 
   const next = async () => {
     if(stepIdx<STEPS.length-1) { setStepIdx(i=>i+1); return; }
     setPhase("loading");
@@ -599,7 +603,7 @@ function DiagnosticTab() {
       setPhase("result");
     } catch { setMessages([{role:"assistant",content:"❌ Erreur, veuillez réessayer."}]); setPhase("result"); }
   };
-
+ 
   const sendChat = async () => {
     const txt = chatInp.trim(); if(!txt||chatLoading) return;
     setChatInp("");
@@ -612,9 +616,9 @@ function DiagnosticTab() {
     } catch { setMessages(m=>[...m,{role:"assistant",content:"❌ Erreur."}]); }
     finally { setChatLoading(false); }
   };
-
+ 
   const reset = () => { setPhase("home"); setStepIdx(0); setAnswers({}); setMessages([]); setChatInp(""); };
-
+ 
   if(phase==="home") return (
     <div style={{display:"flex",flexDirection:"column",gap:40,paddingTop:36}}>
       <div style={{display:"flex",flexDirection:"column",alignItems:"center",textAlign:"center",gap:16}}>
@@ -644,7 +648,7 @@ function DiagnosticTab() {
       </div>
     </div>
   );
-
+ 
   if(phase==="quiz") return (
     <div style={{display:"flex",flexDirection:"column",gap:20,paddingTop:28,maxWidth:600,margin:"0 auto",width:"100%"}}>
       <ProgressBar current={stepIdx+1} total={STEPS.length}/>
@@ -668,7 +672,7 @@ function DiagnosticTab() {
       </div>
     </div>
   );
-
+ 
   if(phase==="loading") return (
     <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flex:1,gap:20,paddingTop:100}}>
       <svg width="80" height="80" viewBox="0 0 80 80">
@@ -681,12 +685,12 @@ function DiagnosticTab() {
       <p style={{fontSize:13,color:"#555",textAlign:"center",maxWidth:340}}>Notre IA croise vos réponses pour vous proposer les meilleures options</p>
     </div>
   );
-
+ 
   const chips = Object.entries(answers).slice(0,4).flatMap(([key,val])=>{
     const st=STEPS.find(s=>s.id===key); const vals=Array.isArray(val)?val:[val];
     return vals.map(v=>st?.options.find(o=>o.value===v)?.label||v);
   });
-
+ 
   return (
     <div style={{display:"flex",flexDirection:"column",paddingTop:20,height:"calc(100vh - 140px)"}}>
       <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:7,marginBottom:14}}>
@@ -718,7 +722,7 @@ function DiagnosticTab() {
     </div>
   );
 }
-
+ 
 // ═══════════════════════════════════════════════════════════════════
 // MAIN APP
 // ═══════════════════════════════════════════════════════════════════
@@ -728,14 +732,14 @@ const TABS = [
   {id:"simul", icon:"◆", label:"SIMULATEUR"},
   {id:"sav",   icon:"◉", label:"SAV & ENTRETIEN"},
 ];
-
+ 
 function App() {
   const [tab, setTab] = useState("diag");
-
+ 
   return (
     <div style={{fontFamily:"'Inter',sans-serif",background:"#07070f",minHeight:"100vh",color:"#F8F8F8",position:"relative",overflow:"hidden"}}>
       <div style={{position:"fixed",inset:0,backgroundImage:"linear-gradient(rgba(21,101,192,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(21,101,192,0.025) 1px,transparent 1px)",backgroundSize:"44px 44px",pointerEvents:"none",zIndex:0}}/>
-
+ 
       {/* HEADER */}
       <header style={{position:"sticky",top:0,zIndex:100,background:"rgba(7,7,15,0.97)",borderBottom:"1px solid #0a1a2a",backdropFilter:"blur(14px)"}}>
         <div style={{maxWidth:880,margin:"0 auto",padding:"0 20px"}}>
@@ -784,7 +788,7 @@ function App() {
           </div>
         </div>
       </header>
-
+ 
       {/* MAIN */}
       <main style={{position:"relative",zIndex:1,maxWidth:880,margin:"0 auto",padding:"0 20px 60px"}}>
         {tab==="diag"  && <DiagnosticTab/>}
@@ -792,7 +796,7 @@ function App() {
         {tab==="simul" && <SimulateurTab/>}
         {tab==="sav"   && <SAVPanel/>}
       </main>
-
+ 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
@@ -805,9 +809,11 @@ function App() {
     </div>
   );
 }
-
-
-ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+ 
+ 
+const container = document.getElementById('root');
+const root = ReactDOM.createRoot(container);
+root.render(React.createElement(App));
   </script>
 </body>
 </html>
