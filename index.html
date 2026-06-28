@@ -127,7 +127,7 @@ function buildDiagPrompt(answers) {
 async function callClaude(system, messages) {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method:"POST",
-    headers:{"Content-Type":"application/json","x-api-key":"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","anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+    headers:{"Content-Type":"application/json","x-api-key":"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","anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
     body: JSON.stringify({ model:"claude-sonnet-4-6", max_tokens:1000, system, messages }),
   });
   const d = await res.json();
@@ -137,7 +137,7 @@ async function callClaude(system, messages) {
 async function callClaudeWithImage(system, messages) {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method:"POST",
-    headers:{"Content-Type":"application/json","x-api-key":"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","anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+    headers:{"Content-Type":"application/json","x-api-key":"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","anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
     body: JSON.stringify({ model:"claude-sonnet-4-6", max_tokens:1000, system, messages }),
   });
   const d = await res.json();
