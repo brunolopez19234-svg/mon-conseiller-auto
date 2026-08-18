@@ -1097,7 +1097,7 @@ function DiagnosticTab() {
           Demarrer mon diagnostic
         </button>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(210px,1fr))",gap:12}}>
         {[{icon:"",t:"Motorisation",d:"Electrique, hybride, diesel, essence : ce qui colle a votre usage reel."},{icon:"",t:"Financement",d:"LOA, LLD, credit ou comptant - avantages fiscaux inclus pour les pros."},{icon:"",t:"Modeles concrets",d:"Des recommandations de vehicules reels, pas des generalites."}].map(c=>(
           <div key={c.t} style={{background:"#0d0d1a",border:"1px solid #141424",borderRadius:14,padding:"20px 18px",display:"flex",flexDirection:"column",gap:10}}>
             <span style={{fontSize:26}}>{c.icon}</span>
